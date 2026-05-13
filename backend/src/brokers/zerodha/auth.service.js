@@ -4,6 +4,6 @@ export const getZerodhaLoginUrl = () => {
 
 };
 
-export const exchangrZerodhaCode = () => {
+export const exchangeZerodhaCode = () => {
     
 };
