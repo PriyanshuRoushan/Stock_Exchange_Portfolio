@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const fetchUpstockHolding = async (accessToken) => {
+export const fetchUpstoxHolding = async (accessToken) => {
     try{
         const response = await axios.get(
           "https://api.upstox.com/v2/portfolio/long-term-holdings",

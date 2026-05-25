@@ -1,7 +1,10 @@
 import express from "express";
 import cors from "cors";
-import authRoutes from "./routes/auth.routes.js";
 import cookieParser from "cookie-parser";
+// routes
+import authRoutes from "./routes/auth.routes.js";
+import brokerRoutes from "./routes/broker.route.js";
+
 
 
 // test
@@ -21,6 +24,7 @@ app.use("/api/test", testRoute);
 
 // routes
 app.use("/api/auth", authRoutes);
+app.use("/api/brokers", brokerRoutes);
 
 app.get("/", (req, res) => {
   res.send("API Running...");

@@ -1,4 +1,4 @@
-import { getUpstockLoginUrl, exchangeUpstockCode } from "../brokers/upstock/auth.service.js";
+import { getUpstoxLoginUrl, exchangeUpstoxCode , fetchUpstoxProfile} from "../brokers/upstox/auth.service.js";
 
 import { getZerodhaLoginUrl, exchangeZerodhaCode } from "../brokers/zerodha/auth.service.js";
 
@@ -10,27 +10,51 @@ UUU     UUU  PPPPPPPPP   SSSSS       TTT     OOO   OOO CCC       KKKKK
 UUU     UUU  PPP              SS     TTT     OOO   OOO CCC       KKK KKK
  UUUUUUUUU   PPP        SSSSSSS      TTT      OOOOOOO   CCCCCCC  KKK   KKK
 */
-// UPSTOCK CONNECTION
-export const connectUpstock = async (req, res) => {
+
+// Upstox CONNECTION
+export const connectUpstox = async (req, res) => {
     try{
-        const Url = getUpstockLoginUrl();
-        res.reditect(Url);
+        const url = getUpstoxLoginUrl();
+        res.redirect(url);
     }catch(error){
         res.status(500).json({error: error.message});
     }
 };
 
-// UPSTOCK CALLBACK
-export const upstockCallback = async (req, res) => {
+// Upstox CALLBACK
+export const upstoxCallback = async (req, res) => {
     try{
         const code = req.query.code;
 
-        const response = await exchangeUpstockCode(code);
+        const tokenData = await exchangeUpstoxCode(code);
 
-        res.status(200).json(response.data);
+        const profileData = await fetchUpstoxProfile(response.access_token);
+
+        await supabase.from("connected_accounts").insert({
+            user_id: user.id,
+            broker: 1,
+            broker_user_name: 
+                profileData.data.user_name,
+            broker_user_id: 
+                profileData.data.user_id,
+            access_token: 
+                tokenData.access_token,
+            refresh_token: 
+                tokenData.refresh_token,
+            token_expiryb:
+                new Date(
+                    Date.now() + 
+                    tokenData.expires_in * 1000
+                ),
+            last_synced_at: 
+                new Date(),
+            conncetion_status: 'connected',
+        });
+
+        res.status(200).json({tokenData, profileData});
         
     }catch(error){
-        res.status(5600).json({error: error.message});
+        res.status(500).json({error: error.message});
     }
 };
 
@@ -41,11 +65,13 @@ ZZZZZZZ  EEEEE  RRRRRR    OOOOO   DDDD    H   H   AAAAA
   ZZ     E      RR  RR   OO   OO  D   DD  H   H  AA   AA
 ZZZZZZZ  EEEEE  RR   RR   OOOOO   DDDD    H   H  AA   AA
 */
+
+
 //ZEROD CONNECTION
 export const connectZerodha = async (req, res) => {
     try{
-        const Url = getZerodhaLoginUrl();
-        res.reditect(Url);
+        const url = getZerodhaLoginUrl();
+        res.redirect(url);
     }catch(error){ 
         res.status(500).json({error: error.message});
     }
@@ -72,7 +98,7 @@ GG   GG  RR  RR   OO   OO  WWWWWWWWWWWWWWW
  GGGGG   RR   RR   OOOOO    WWWWW   WWWWW
 */
 
-export const conncetGrow = async (req, res) => {
+export const connectGrow = async (req, res) => {
     try{
 
     }catch(error){

@@ -1,18 +1,18 @@
 import express from "express";
 
 import {
-    connectUpstock,
-    upstockCallback,
+    connectUpstox,
+    upstoxCallback,
     connectZerodha,
     zerodhaCallback
 } from "../controllers/broker.controller.js";
 
 const router = express.Router();
 
-router.post("upstock/connect", connectUpstock);
-router.post("upstock/callback", upstockCallback);
+router.get("/upstox/connect", connectUpstox);
+router.post("upstox/callback", upstoxCallback);
 
-router.post("zerodha/connect", connectZerodha);
+router.get("/zerodha/connect", connectZerodha);
 router.post("zerodha/callback", zerodhaCallback);
 
 export default router;

@@ -1,12 +1,16 @@
 import axios from "axios";
 
 // Step 1: Generate Login URL
-export const getUpstockLoginUrl = () => {
+export const getUpstoxLoginUrl = (state) => {
     return `https://api-v2.upstox.com/login/authorization/dialog?response_type=code&client_id=${process.env.UPSTOX_API_KEY}&redirect_uri=${process.env.UPSTOX_REDIRECT_URI}`;
 };
 
 // Step 2: Exchange Authorization Code for Access Token
-export const exchangeUpstockCode = async (code) => {
+export const exchangeUpstoxCode = async (code) => {
+
+    if(!code)   {
+        throw new Error("Missing authorization code");
+    }
 
     const params = new URLSearchParams();
 
@@ -35,7 +39,7 @@ export const exchangeUpstockCode = async (code) => {
     try {
 
         const response = await axios.post(
-            "https://api-v2.upstox.com/login/authorization/token",
+            "https://api.upstox.com/v2/login/authorization/token",
             params,
             {
                 headers: {
@@ -45,7 +49,10 @@ export const exchangeUpstockCode = async (code) => {
             }
         );
 
-        return response.data;
+        return {
+            accessToken: response.data.access_token,
+            userId: response.data.user_id,
+        };
 
     } catch (error) {
 
@@ -55,5 +62,22 @@ export const exchangeUpstockCode = async (code) => {
         );
 
         throw new Error("Failed to exchange Upstox authorization code");
+    }
+};
+
+// feth upstox profile
+export const fetchUpstoxProfile = async (accessToken) => {
+    try{
+        const res = await axios.get("https://api.upstox.com/v2/user/profile", {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                Accept: "application/json"
+            }
+        });
+        return res.data;
+
+    }catch{
+        console.error("Upstox Profile Fetch Error", error.response?.data || error.message);
+        throw new Error("Failed to fetch Upstox profile");
     }
 };
