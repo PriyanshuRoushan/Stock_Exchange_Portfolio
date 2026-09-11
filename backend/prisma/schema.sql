@@ -52,3 +52,27 @@ CREATE TABLE IF NOT EXISTS sync_logs (
     message TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Add column to HOLDINGS table
+-- Rename avg_price to something more descriptive
+ALTER TABLE public.holdings
+RENAME COLUMN avg_price TO average_buy_price;
+
+-- Add new columns
+ALTER TABLE public.holdings
+ADD COLUMN company_name TEXT,
+ADD COLUMN isin VARCHAR(20),
+ADD COLUMN exchange VARCHAR(10),
+
+ADD COLUMN invested_value NUMERIC(18,2),
+ADD COLUMN current_value NUMERIC(18,2),
+
+ADD COLUMN pnl NUMERIC(18,2),
+ADD COLUMN pnl_percentage NUMERIC(8,2),
+
+ADD COLUMN day_pnl NUMERIC(18,2),
+ADD COLUMN day_change_percentage NUMERIC(8,2),
+
+ADD COLUMN currency VARCHAR(10) DEFAULT 'INR',
+
+ADD COLUMN last_synced_at TIMESTAMP;
