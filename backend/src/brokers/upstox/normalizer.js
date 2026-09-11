@@ -11,6 +11,6 @@ export const normalizeUpstoxHoldings = (
 
         current_price: item.last_price,
 
-        exchange: item.exchange
+        asset_type: item.asset_type || "EQUITY"
     }));
 };

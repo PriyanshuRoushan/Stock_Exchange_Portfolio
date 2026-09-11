@@ -1,5 +1,5 @@
+import pool from "../config/db.js";
 import { getUpstoxLoginUrl, exchangeUpstoxCode , fetchUpstoxProfile} from "../brokers/upstox/auth.service.js";
-
 import { getZerodhaLoginUrl, exchangeZerodhaCode } from "../brokers/zerodha/auth.service.js";
 
 
@@ -14,7 +14,8 @@ UUU     UUU  PPP              SS     TTT     OOO   OOO CCC       KKK KKK
 // Upstox CONNECTION
 export const connectUpstox = async (req, res) => {
     try{
-        const url = getUpstoxLoginUrl();
+        const userId = req.user.id;
+        const url = getUpstoxLoginUrl(userId);
         res.redirect(url);
     }catch(error){
         res.status(500).json({error: error.message});
@@ -25,31 +26,61 @@ export const connectUpstox = async (req, res) => {
 export const upstoxCallback = async (req, res) => {
     try{
         const code = req.query.code;
+        const state = req.query.state;
+        const userId = parseInt(state, 10);
+
+        if (isNaN(userId)) {
+            throw new Error("Invalid or missing user ID state parameter");
+        }
 
         const tokenData = await exchangeUpstoxCode(code);
+        const profileData = await fetchUpstoxProfile(tokenData.accessToken);
 
-        const profileData = await fetchUpstoxProfile(response.access_token);
+        // Resolve broker ID from database
+        const brokerResult = await pool.query(
+            "SELECT id FROM brokers WHERE name = $1",
+            ["Upstox"]
+        );
 
-        await supabase.from("connected_accounts").insert({
-            user_id: user.id,
-            broker: 1,
-            broker_user_name: 
-                profileData.data.user_name,
-            broker_user_id: 
+        if (brokerResult.rows.length === 0) {
+            throw new Error("Broker Upstox not found in database. Please seed the brokers table.");
+        }
+
+        const brokerId = brokerResult.rows[0].id;
+
+        await pool.query(
+            `INSERT INTO connected_accounts (
+                user_id,
+                broker_id,
+                broker_user_name,
+                broker_user_id,
+                access_token,
+                refresh_token,
+                token_expiry,
+                connection_status,
+                last_synced_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            ON CONFLICT (user_id, broker_id)
+            DO UPDATE SET
+                broker_user_name = EXCLUDED.broker_user_name,
+                broker_user_id = EXCLUDED.broker_user_id,
+                access_token = EXCLUDED.access_token,
+                refresh_token = EXCLUDED.refresh_token,
+                token_expiry = EXCLUDED.token_expiry,
+                connection_status = EXCLUDED.connection_status,
+                last_synced_at = NOW()`,
+            [
+                userId,
+                brokerId,
+                profileData.data.user_name || null,
                 profileData.data.user_id,
-            access_token: 
-                tokenData.access_token,
-            refresh_token: 
-                tokenData.refresh_token,
-            token_expiryb:
-                new Date(
-                    Date.now() + 
-                    tokenData.expires_in * 1000
-                ),
-            last_synced_at: 
-                new Date(),
-            conncetion_status: 'connected',
-        });
+                tokenData.accessToken,
+                tokenData.refreshToken || null,
+                new Date(Date.now() + (tokenData.expiresIn || 86400) * 1000),
+                "connected"
+            ]
+        );
 
         res.status(200).json({tokenData, profileData});
         
@@ -70,7 +101,8 @@ ZZZZZZZ  EEEEE  RR   RR   OOOOO   DDDD    H   H  AA   AA
 //ZEROD CONNECTION
 export const connectZerodha = async (req, res) => {
     try{
-        const url = getZerodhaLoginUrl();
+        const userId = req.user.id;
+        const url = getZerodhaLoginUrl(userId);
         res.redirect(url);
     }catch(error){ 
         res.status(500).json({error: error.message});

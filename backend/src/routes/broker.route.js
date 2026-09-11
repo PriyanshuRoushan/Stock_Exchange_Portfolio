@@ -1,4 +1,5 @@
 import express from "express";
+import verifyToken from "../middlewares/auth.middleware.js";
 
 import {
     connectUpstox,
@@ -9,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.get("/upstox/connect", connectUpstox);
-router.post("upstox/callback", upstoxCallback);
+router.get("/upstox/connect", verifyToken, connectUpstox);
+router.get("/upstox/callback", upstoxCallback);
 
-router.get("/zerodha/connect", connectZerodha);
-router.post("zerodha/callback", zerodhaCallback);
+router.get("/zerodha/connect", verifyToken, connectZerodha);
+router.get("/zerodha/callback", zerodhaCallback);
 
 export default router;

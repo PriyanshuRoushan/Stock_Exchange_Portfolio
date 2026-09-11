@@ -108,7 +108,7 @@ export const syncPortfolio = async (
                         quantity = $1,
                         avg_price = $2,
                         current_price = $3,
-                        exchange = $4,
+                        asset_type = $4,
                         updated_at = NOW()
                     WHERE connected_account_id = $5
                     AND symbol = $6
@@ -117,7 +117,7 @@ export const syncPortfolio = async (
                         holding.quantity,
                         holding.avg_price,
                         holding.current_price,
-                        holding.exchange,
+                        holding.asset_type,
                         account.id,
                         holding.symbol
                     ]
@@ -138,7 +138,7 @@ export const syncPortfolio = async (
                         quantity,
                         avg_price,
                         current_price,
-                        exchange
+                        asset_type
                     )
                     VALUES ($1, $2, $3, $4, $5, $6)
                     `,
@@ -148,7 +148,7 @@ export const syncPortfolio = async (
                         holding.quantity,
                         holding.avg_price,
                         holding.current_price,
-                        holding.exchange
+                        holding.asset_type
                     ]
                 );
             }

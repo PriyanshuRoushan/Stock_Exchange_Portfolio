@@ -3,14 +3,14 @@ import pool from "../config/db.js";
 
 
 export const registerService = async({username, email, password}) => {
+    if(!username || !email || !password){
+        throw new Error("All fields are required");
+    }
+
     const existingUser = await pool.query(
         "SELECT * FROM users WHERE email = $1",
         [email]
     );
-
-    if(!username || !email || !password){
-        throw new Error("All fields are required");
-    }
 
     if(existingUser.rows.length > 0){
         throw new Error("User already exists");

@@ -1,7 +1,7 @@
 // Upstox Imports
 
-import { fetchUpstoxHolding } from "../brokers/Upstox/holding.service.js";
-import { normalizeUpstoxHoldings } from "../brokers/Upstox/normalizer.js";
+import { fetchUpstoxHolding } from "../brokers/upstox/holding.service.js";
+import { normalizeUpstoxHoldings } from "../brokers/upstox/normalizer.js";
 
 
 

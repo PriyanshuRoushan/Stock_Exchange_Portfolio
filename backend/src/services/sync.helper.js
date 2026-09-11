@@ -15,10 +15,11 @@ export const validateBrokerConnection = async (
 
     const result = await pool.query(
         `
-        SELECT *
-        FROM connected_accounts
-        WHERE user_id = $1
-        AND broker_id = $2
+        SELECT ca.*
+        FROM connected_accounts ca
+        JOIN brokers b ON ca.broker_id = b.id
+        WHERE ca.user_id = $1
+        AND b.name = $2
         `,
         [userId, broker]
     );

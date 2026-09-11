@@ -17,7 +17,7 @@ router.get("/sync-test", async (req, res) => {
          */
         const userId = 1;
 
-        const broker = 1;
+        const broker = "Upstox";
 
 
 

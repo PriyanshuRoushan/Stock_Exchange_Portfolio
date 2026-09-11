@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Step 1: Generate Login URL
 export const getUpstoxLoginUrl = (state) => {
-    return `https://api-v2.upstox.com/login/authorization/dialog?response_type=code&client_id=${process.env.UPSTOX_API_KEY}&redirect_uri=${process.env.UPSTOX_REDIRECT_URI}`;
+    return `https://api-v2.upstox.com/login/authorization/dialog?response_type=code&client_id=${process.env.UPSTOX_API_KEY}&redirect_uri=${process.env.UPSTOX_REDIRECT_URI}&state=${state}`;
 };
 
 // Step 2: Exchange Authorization Code for Access Token
@@ -52,6 +52,8 @@ export const exchangeUpstoxCode = async (code) => {
         return {
             accessToken: response.data.access_token,
             userId: response.data.user_id,
+            expiresIn: response.data.expires_in,
+            refreshToken: response.data.refresh_token,
         };
 
     } catch (error) {
@@ -76,7 +78,7 @@ export const fetchUpstoxProfile = async (accessToken) => {
         });
         return res.data;
 
-    }catch{
+    }catch(error){
         console.error("Upstox Profile Fetch Error", error.response?.data || error.message);
         throw new Error("Failed to fetch Upstox profile");
     }
