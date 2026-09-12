@@ -1,6 +1,6 @@
 // Upstox Imports
 
-import { fetchUpstoxHolding } from "../brokers/upstox/holding.service.js";
+import { fetchUpstoxHoldings } from "../brokers/upstox/holding.service.js";
 import { normalizeUpstoxHoldings } from "../brokers/upstox/normalizer.js";
 
 
@@ -10,7 +10,7 @@ import { normalizeUpstoxHoldings } from "../brokers/upstox/normalizer.js";
 // Broker Registry
 export const brokerRegistry = {
     Upstox: {
-        fetchHoldings: fetchUpstoxHolding,
+        fetchHoldings: fetchUpstoxHoldings,
         normalizeHoldings: normalizeUpstoxHoldings
     }
 
