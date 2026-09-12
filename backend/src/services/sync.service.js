@@ -106,7 +106,7 @@ export const syncPortfolio = async (
                     UPDATE holdings
                     SET
                         quantity = $1,
-                        avg_price = $2,
+                        average_buy_price = $2,
                         current_price = $3,
                         asset_type = $4,
                         updated_at = NOW()
@@ -115,7 +115,7 @@ export const syncPortfolio = async (
                     `,
                     [
                         holding.quantity,
-                        holding.avg_price,
+                        holding.avg_price || holding.average_buy_price || 0,
                         holding.current_price,
                         holding.asset_type,
                         account.id,
@@ -136,7 +136,7 @@ export const syncPortfolio = async (
                         connected_account_id,
                         symbol,
                         quantity,
-                        avg_price,
+                        average_buy_price,
                         current_price,
                         asset_type
                     )
@@ -146,7 +146,7 @@ export const syncPortfolio = async (
                         account.id,
                         holding.symbol,
                         holding.quantity,
-                        holding.avg_price,
+                        holding.avg_price || holding.average_buy_price || 0,
                         holding.current_price,
                         holding.asset_type
                     ]

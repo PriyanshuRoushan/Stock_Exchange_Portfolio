@@ -170,3 +170,35 @@ export const angeloneCallback = async (req, res) => {
         res.status(500).json({error: error.message});
     }
 };
+
+export const getHoldings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const result = await pool.query(
+            `SELECT 
+                h.id,
+                h.symbol,
+                COALESCE(h.exchange, 'NSE') AS exchange,
+                h.quantity,
+                COALESCE(h.average_buy_price, 0) AS avg_price,
+                COALESCE(h.average_buy_price, 0) AS average_buy_price,
+                COALESCE(h.current_price, 0) AS current_price,
+                COALESCE(h.company_name, h.symbol) AS company_name,
+                h.asset_type,
+                h.pnl,
+                h.pnl_percentage,
+                h.updated_at
+            FROM holdings h
+            JOIN connected_accounts ca ON h.connected_account_id = ca.id
+            WHERE ca.user_id = $1
+            ORDER BY h.updated_at DESC`,
+            [userId]
+        );
+
+        res.status(200).json({ holdings: result.rows });
+    } catch (error) {
+        console.error("Error fetching holdings:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
