@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import useAuth from '../hooks/useAuth';
 
 export default function Login() {
@@ -8,8 +9,29 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleSuccess = async (tokenResponse) => {
+    setError('');
+    setLoading(true);
+    try {
+      await googleLogin({ accessToken: tokenResponse.access_token });
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Google login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: (err) => {
+      console.error('Google Login Error:', err);
+      setError('Google Login failed or was cancelled');
+    }
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,10 +78,16 @@ export default function Login() {
 
           {/* Social Authentication Grid */}
           <div className="grid grid-cols-2 gap-4 mb-8">
-            <button type="button" className="flex items-center justify-center gap-2 py-3 px-4 border border-outline-variant rounded-lg bg-surface-container-lowest hover:bg-surface-container-low transition-colors duration-200 shadow active:scale-95">
+            <button 
+              type="button" 
+              onClick={() => loginWithGoogle()}
+              disabled={loading}
+              className="flex items-center justify-center gap-2 py-3 px-4 border border-outline-variant rounded-lg bg-surface-container-lowest hover:bg-surface-container-low transition-colors duration-200 shadow active:scale-95 disabled:opacity-50"
+            >
               <img alt="Google Logo" className="w-5 h-5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4XOwK7Qk_exn_LpmKFf5XMYmkuQXmjyP5L1oOv0CkaKAtGm0L-1rOsJcOv25xi8SHGADxOV41OZKedJKZWMVN7mVGTEAKe_NQlng18EKs4iGW5s5jSQhGw26ywcbkvE_4rvgl_xo7mY39TMADbC2JYh3a-IjHgbHVKIfHbWGCjWNNT99IdSt5d_RDStO33e9i7SNroD7lJU6ClVRrRBnIL6s9aaCAGAW-Wco7kEitBAZOGhuvxbHZKFfT5BWjktTvW4t1GvWwcNk" />
               <span className="text-label-md font-label-md text-on-surface text-sm">Google</span>
             </button>
+
             <button type="button" className="flex items-center justify-center gap-2 py-3 px-4 border border-outline-variant rounded-lg bg-surface-container-lowest hover:bg-surface-container-low transition-colors duration-200 shadow active:scale-95">
               <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                 file_download

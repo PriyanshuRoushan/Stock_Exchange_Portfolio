@@ -34,13 +34,21 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
+  const googleLogin = async (payload) => {
+    const data = typeof payload === 'string' ? { idToken: payload } : payload;
+    const response = await api.post('/auth/google', data);
+    setUser(response.data);
+    return response.data;
+  };
+
   const logout = async () => {
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, googleLogin }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
