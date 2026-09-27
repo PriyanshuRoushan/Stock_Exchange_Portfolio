@@ -1,5 +1,5 @@
 import express from "express";
-import { register, login, logout } from "../controllers/auth.controllers.js";
+import { register, login, logout, googleLogin } from "../controllers/auth.controllers.js";
 import verifyToken from "../middlewares/auth.middleware.js";
 import pool from "../config/db.js";
 
@@ -8,6 +8,7 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/login", login);
 router.post("/logout", logout);
+router.post("/google", googleLogin);
 
 router.get("/me", verifyToken, async (req, res) => {
     try {

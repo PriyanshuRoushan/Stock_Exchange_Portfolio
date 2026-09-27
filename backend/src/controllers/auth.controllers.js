@@ -1,5 +1,5 @@
 import generateToken from "../utils/generateToken.js";
-import { loginService, registerService } from "../services/auth.service.js";
+import { loginService, registerService, googleAuthService } from "../services/auth.service.js";
 
 export const login = async (req, res) => {
     try {
@@ -13,6 +13,25 @@ export const login = async (req, res) => {
         res.status(200).json({ ...user, token });
     } catch (err) {
         res.status(400).json({ error: err.message || "Invalid Credentials" });
+    }
+};
+
+export const googleLogin = async (req, res) => {
+    try {
+        const { idToken, accessToken, token } = req.body;
+        const user = await googleAuthService({ idToken: idToken || token, accessToken });
+        const jwtToken = generateToken(user.id);
+        res.cookie("token", jwtToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+        });
+        res.status(200).json({ ...user, token: jwtToken });
+    } catch (err) {
+        console.error("Google login error:", err);
+        res.status(400).json({
+            error: err.message || "Google authentication failed"
+        });
     }
 };
 
