@@ -1,6 +1,13 @@
 import pool from "../config/db.js";
 import { getUpstoxLoginUrl, exchangeUpstoxCode , fetchUpstoxProfile} from "../brokers/upstox/auth.service.js";
 import { getZerodhaLoginUrl, exchangeZerodhaCode } from "../brokers/zerodha/auth.service.js";
+import { createBrokerState, readBrokerState } from "../utils/brokerState.js";
+import { getPortfolioForUser } from "../services/portfolio.service.js";
+import { syncPortfolio } from "../services/sync.service.js";
+import {
+    getUpstoxSnapshot,
+    parseUpstoxResources,
+} from "../services/upstox-data.service.js";
 
 
 /*
@@ -15,7 +22,8 @@ UUU     UUU  PPP              SS     TTT     OOO   OOO CCC       KKK KKK
 export const connectUpstox = async (req, res) => {
     try{
         const userId = req.user.id;
-        const url = getUpstoxLoginUrl(userId);
+        const state = createBrokerState({ userId, broker: "Upstox" });
+        const url = getUpstoxLoginUrl(state);
         res.redirect(url);
     }catch(error){
         res.status(500).json({error: error.message});
@@ -27,11 +35,7 @@ export const upstoxCallback = async (req, res) => {
     try{
         const code = req.query.code;
         const state = req.query.state;
-        const userId = parseInt(state, 10);
-
-        if (isNaN(userId)) {
-            throw new Error("Invalid or missing user ID state parameter");
-        }
+        const { userId } = readBrokerState(state, "Upstox");
 
         const tokenData = await exchangeUpstoxCode(code);
         const profileData = await fetchUpstoxProfile(tokenData.accessToken);
@@ -82,7 +86,11 @@ export const upstoxCallback = async (req, res) => {
             ]
         );
 
-        res.status(200).json({tokenData, profileData});
+        res.status(200).json({
+            success: true,
+            message: "Upstox account connected. Call POST /api/brokers/upstox/sync to import holdings.",
+            account: { broker: "Upstox", brokerUserId: profileData.data.user_id }
+        });
         
     }catch(error){
         res.status(500).json({error: error.message});
@@ -173,32 +181,51 @@ export const angeloneCallback = async (req, res) => {
 
 export const getHoldings = async (req, res) => {
     try {
-        const userId = req.user.id;
-
-        const result = await pool.query(
-            `SELECT 
-                h.id,
-                h.symbol,
-                COALESCE(h.exchange, 'NSE') AS exchange,
-                h.quantity,
-                COALESCE(h.average_buy_price, 0) AS avg_price,
-                COALESCE(h.average_buy_price, 0) AS average_buy_price,
-                COALESCE(h.current_price, 0) AS current_price,
-                COALESCE(h.company_name, h.symbol) AS company_name,
-                h.asset_type,
-                h.pnl,
-                h.pnl_percentage,
-                h.updated_at
-            FROM holdings h
-            JOIN connected_accounts ca ON h.connected_account_id = ca.id
-            WHERE ca.user_id = $1
-            ORDER BY h.updated_at DESC`,
-            [userId]
-        );
-
-        res.status(200).json({ holdings: result.rows });
+        const portfolio = await getPortfolioForUser(req.user.id);
+        res.status(200).json({ success: true, ...portfolio });
     } catch (error) {
         console.error("Error fetching holdings:", error);
         res.status(500).json({ error: error.message });
+    }
+};
+
+export const getAccounts = async (req, res) => {
+    try {
+        const portfolio = await getPortfolioForUser(req.user.id);
+        res.status(200).json({ success: true, accounts: portfolio.accounts });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const syncBroker = async (req, res) => {
+    const broker = req.params.broker?.toLowerCase() === "upstox" ? "Upstox" : null;
+    if (!broker) return res.status(400).json({ error: "Unsupported broker" });
+
+    try {
+        const result = await syncPortfolio(req.user.id, broker);
+        const portfolio = await getPortfolioForUser(req.user.id);
+        res.status(200).json({ success: true, sync: result, portfolio });
+    } catch (error) {
+        const status = error.response?.status === 401 ? 401 : 500;
+        res.status(status).json({ success: false, error: error.message });
+    }
+};
+
+export const getUpstoxAccountData = async (req, res) => {
+    try {
+        const resources = parseUpstoxResources(req.query.include);
+        const pageNumber = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+        const pageSize = Math.min(100, Math.max(1, Number.parseInt(req.query.pageSize, 10) || 20));
+        const snapshot = await getUpstoxSnapshot(req.user.id, {
+            resources,
+            pageNumber,
+            pageSize,
+        });
+
+        res.status(200).json({ success: true, ...snapshot });
+    } catch (error) {
+        const status = error.status || (error.message.startsWith("Unsupported") ? 400 : 500);
+        res.status(status).json({ success: false, error: error.message });
     }
 };
