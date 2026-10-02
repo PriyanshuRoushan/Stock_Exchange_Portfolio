@@ -19,6 +19,9 @@ All APIs below require the authenticated session cookie or Bearer token.
 | `GET` | `/api/brokers/holdings` | Consolidated holdings, account list, and portfolio summary |
 | `POST` | `/api/brokers/upstox/sync` | Fetch and persist Upstox long-term holdings |
 | `GET` | `/api/brokers/upstox/account-data` | Fetch current Upstox account data on demand (not persisted) |
+| `GET` | `/api/brokers/angelone/connect` | Start Angel One SmartAPI hosted login |
+| `POST` | `/api/brokers/angelone/sync` | Fetch and persist Angel One holdings |
+| `GET` | `/api/brokers/angelone/account-data` | Fetch Angel One positions, orders, and funds on demand |
 | `GET` | `/api/dashboard/overview` | Portfolio summary plus the best and worst real holdings |
 
 ## Upstox account data
@@ -37,6 +40,20 @@ resource that Upstox could not provide. The access token is never included.
 Orders, funds, news, positions, and mutual funds are read live and are not
 saved yet; long-term equity holdings continue to be persisted through the sync
 endpoint.
+
+## Angel One setup and account data
+
+Angel One uses SmartAPI. Register your application with SmartAPI and configure
+`ANGEL_API_KEY`, `ANGEL_REDIRECT_URI`, `ANGEL_CLIENT_LOCAL_IP`,
+`ANGEL_CLIENT_PUBLIC_IP`, and `ANGEL_MAC_ADDRESS` on the backend. The connect
+endpoint uses Angel One's hosted Publisher Login; this app never collects an
+Angel One PIN or TOTP.
+
+After connection, `POST /api/brokers/angelone/sync` stores delivery holdings.
+`GET /api/brokers/angelone/account-data` fetches live positions, current order
+book, and funds/margin. Pass `?include=positions,orders,funds,profile` to select
+resources. Angel One's returned authentication token is stored server-side and
+is never sent to the frontend.
 
 ## Canonical holding fields
 
