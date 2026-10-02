@@ -1,230 +1,114 @@
-// syncPortfolio()
-// syncBrokerHoldings()
-// validateBrokerConnection()
-// getBrokerAccessToken()
-// saveSyncLog()
-
 import pool from "../config/db.js";
-
 import {
-    validateBrokerConnection,
-    getBrokerAccessToken,
-    syncBrokerHoldings,
-    normalizeBrokerHoldings,
-    saveSyncLog
+  getBrokerAccessToken,
+  normalizeBrokerHoldings,
+  saveSyncLog,
+  syncBrokerHoldings,
+  validateBrokerConnection,
 } from "./sync.helper.js";
 
-/**
- * Sync Portfolio
- */
-export const syncPortfolio = async (
-    userId,
-    broker
-) => {
+const upsertHolding = async (client, accountId, holding) => {
+  const existing = await client.query(
+    `SELECT id FROM holdings
+     WHERE connected_account_id = $1
+       AND symbol = $2
+       AND COALESCE(exchange, 'NSE') = COALESCE($3, 'NSE')
+     LIMIT 1`,
+    [accountId, holding.symbol, holding.exchange]
+  );
+
+  const values = [
+    holding.quantity,
+    holding.averageBuyPrice,
+    holding.currentPrice,
+    holding.assetType,
+    holding.companyName,
+    holding.isin,
+    holding.exchange,
+    holding.investedValue,
+    holding.currentValue,
+    holding.pnl,
+    holding.pnlPercentage,
+    holding.dayPnl,
+    holding.dayChangePercentage,
+    holding.currency,
+    holding.instrumentToken,
+  ];
+
+  if (existing.rows.length) {
+    await client.query(
+      `UPDATE holdings SET
+        quantity = $1, average_buy_price = $2, current_price = $3, asset_type = $4,
+        company_name = $5, isin = $6, exchange = $7, invested_value = $8,
+        current_value = $9, pnl = $10, pnl_percentage = $11, day_pnl = $12,
+        day_change_percentage = $13, currency = $14, instrument_token = $15,
+        is_active = true, last_synced_at = NOW(), updated_at = NOW()
+       WHERE id = $16`,
+      [...values, existing.rows[0].id]
+    );
+  } else {
+    await client.query(
+      `INSERT INTO holdings (
+        connected_account_id, symbol, quantity, average_buy_price, current_price,
+        asset_type, company_name, isin, exchange, invested_value, current_value,
+        pnl, pnl_percentage, day_pnl, day_change_percentage, currency,
+        instrument_token, is_active, last_synced_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+        $15, $16, $17, true, NOW()
+      )`,
+      [accountId, holding.symbol, ...values]
+    );
+  }
+};
+
+export const syncPortfolio = async (userId, broker) => {
+  let account;
+  try {
+    account = await validateBrokerConnection(userId, broker);
+    const accessToken = await getBrokerAccessToken(account);
+    const rawHoldings = await syncBrokerHoldings({ broker, accessToken });
+    const holdings = normalizeBrokerHoldings({ broker, holdings: rawHoldings });
+    const client = await pool.connect();
 
     try {
-
-        /**
-         * Step 1:
-         * Validate Broker Connection
-         */
-        const account =
-            await validateBrokerConnection(
-                userId,
-                broker
-            );
-
-
-
-        /**
-         * Step 2:
-         * Get Broker Access Token
-         */
-        const accessToken =
-            await getBrokerAccessToken(
-                account
-            );
-
-
-
-        /**
-         * Step 3:
-         * Fetch Broker Holdings
-         */
-        const holdings =
-            await syncBrokerHoldings({
-                broker,
-                accessToken
-            });
-
-
-
-        /**
-         * Step 4:
-         * Normalize Broker Holdings
-         */
-        const normalizedHoldings =
-            normalizeBrokerHoldings({
-                broker,
-                holdings
-            });
-
-
-
-        /**
-         * Step 5:
-         * Save / Update Holdings
-         */
-        for (const holding of normalizedHoldings) {
-
-            /**
-             * Check Existing Holding
-             */
-            const existingHolding =
-                await pool.query(
-                    `
-                    SELECT id
-                    FROM holdings
-                    WHERE connected_account_id = $1
-                    AND symbol = $2
-                    `,
-                    [
-                        account.id,
-                        holding.symbol
-                    ]
-                );
-
-
-
-            /**
-             * Update Existing Holding
-             */
-            if (existingHolding.rows.length > 0) {
-
-                await pool.query(
-                    `
-                    UPDATE holdings
-                    SET
-                        quantity = $1,
-                        average_buy_price = $2,
-                        current_price = $3,
-                        asset_type = $4,
-                        updated_at = NOW()
-                    WHERE connected_account_id = $5
-                    AND symbol = $6
-                    `,
-                    [
-                        holding.quantity,
-                        holding.avg_price || holding.average_buy_price || 0,
-                        holding.current_price,
-                        holding.asset_type,
-                        account.id,
-                        holding.symbol
-                    ]
-                );
-
-            }
-
-            /**
-             * Insert New Holding
-             */
-            else {
-
-                await pool.query(
-                    `
-                    INSERT INTO holdings (
-                        connected_account_id,
-                        symbol,
-                        quantity,
-                        average_buy_price,
-                        current_price,
-                        asset_type
-                    )
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    `,
-                    [
-                        account.id,
-                        holding.symbol,
-                        holding.quantity,
-                        holding.avg_price || holding.average_buy_price || 0,
-                        holding.current_price,
-                        holding.asset_type
-                    ]
-                );
-            }
-        }
-
-
-
-        /**
-         * Step 6:
-         * Update Last Synced Time
-         */
-        await pool.query(
-            `
-            UPDATE connected_accounts
-            SET last_synced_at = NOW()
-            WHERE id = $1
-            `,
-            [account.id]
-        );
-
-
-
-        /**
-         * Step 7:
-         * Save Success Sync Log
-         */
-        await saveSyncLog({
-            connected_account_id: account.id,
-            status: "success",
-            message: "Portfolio synced successfully"
-        });
-
-
-
-        /**
-         * Step 8:
-         * Return Final Response
-         */
-        return {
-            success: true,
-            broker,
-            syncedHoldings:
-                normalizedHoldings.length,
-
-            holdings:
-                normalizedHoldings,
-
-            message:
-                "Portfolio synced successfully"
-        };
-
+      await client.query("BEGIN");
+      await client.query(
+        "UPDATE holdings SET is_active = false WHERE connected_account_id = $1",
+        [account.id]
+      );
+      for (const holding of holdings) await upsertHolding(client, account.id, holding);
+      await client.query(
+        "UPDATE connected_accounts SET last_synced_at = NOW(), connection_status = 'connected', updated_at = NOW() WHERE id = $1",
+        [account.id]
+      );
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
 
-    catch (error) {
+    await saveSyncLog({
+      connected_account_id: account.id,
+      status: "success",
+      message: `Synced ${holdings.length} ${broker} holdings`,
+    });
 
-        console.error(
-            "Portfolio Sync Error:",
-            error.response?.data ||
-            error.message
-        );
-
-
-
-        /**
-         * Save Failure Log
-         */
-        await saveSyncLog({
-            connected_account_id: null,
-            status: "failed",
-            message: error.message
-        });
-
-
-
-        throw new Error(
-            "Portfolio sync failed"
-        );
+    return { broker, accountId: account.id, syncedHoldings: holdings.length, holdings };
+  } catch (error) {
+    if (account?.id) {
+      await pool.query(
+        "UPDATE connected_accounts SET connection_status = 'error', updated_at = NOW() WHERE id = $1",
+        [account.id]
+      );
     }
+    await saveSyncLog({
+      connected_account_id: account?.id || null,
+      status: "failed",
+      message: `${broker} sync failed: ${error.message}`,
+    });
+    throw error;
+  }
 };

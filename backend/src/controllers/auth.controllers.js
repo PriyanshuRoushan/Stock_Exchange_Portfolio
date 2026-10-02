@@ -10,7 +10,7 @@ export const login = async (req, res) => {
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
         });
-        res.status(200).json({ ...user, token });
+        res.status(200).json({ ...user });
     } catch (err) {
         res.status(400).json({ error: err.message || "Invalid Credentials" });
     }
@@ -26,7 +26,7 @@ export const googleLogin = async (req, res) => {
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
         });
-        res.status(200).json({ ...user, token: jwtToken });
+        res.status(200).json({ ...user });
     } catch (err) {
         console.error("Google login error:", err);
         res.status(400).json({
@@ -44,7 +44,7 @@ export const register = async (req, res) => {
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
         });
-        res.status(201).json({ ...user, token });
+        res.status(201).json({ ...user });
     } catch (err) {
         console.error("Registration error:", err);
         res.status(400).json({
